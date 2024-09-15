@@ -1,0 +1,63 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.3'
+    id 'io.spring.dependency-management' version '1.1.6'
+    id 'org.graalvm.buildtools.native' version '0.10.2'
+}
+
+group = 'com.java.native.demo'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+bootJar {
+    enabled = true
+    from file("$buildDir/generated/aotClasses")
+    from sourceSets.main.output
+    from sourceSets.aot.output
+    from collectReachabilityMetadata
+    duplicatesStrategy = DuplicatesStrategy.WARN
+}
+
+graalvmNative {
+    toolchainDetection = false
+    testSupport = false
+    agent {
+        enabled = false
+    }
+    metadataRepository {
+        enabled = true
+    }
+    binaries {
+        main {
+            mainClass = 'com.example.demo.NativeJavaApplication'
+            sharedLibrary = false
+            debug = false
+            // Determines if debug info should be generated, defaults to false (alternatively add --debug-native to the CLI)
+            verbose = true // Add verbose output, defaults to false
+            fallback = false // Sets the fallback mode of native-image, defaults to false
+            quickBuild = false
+            // Determines if image is being built in quick build mode (alternatively use GRAALVM_QUICK_BUILD environment variable, or add --native-quick-build to the CLI)
+            richOutput = true // Determines if native-image building should be done with rich output
+            buildArgs.addAll(['--install-exit-handlers', '--enable-all-security-services', '--enable-http', '--enable-https'])
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
